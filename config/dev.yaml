@@ -1,0 +1,51 @@
+data:
+  csv_path: "data/products.csv"
+  # Expected CSV columns: product_name, group_id, family_id, subfamily_id, segment_id
+  # All *_id columns contain arbitrary long integers (DB primary keys)
+  text_column: "product_name"
+  hierarchy_json: "data/hierarchy.json"
+  encoders_dir: "data/encoders"
+  train_ratio: 0.05
+  calib_ratio: 0.10
+  # test_ratio is implicitly 1 - train - calib
+  random_seed: 42
+  max_rows: 500
+
+model:
+  backbone: "distilbert-base-uncased"
+  max_length: 32
+  # LoRA
+  lora_r: 8
+  lora_alpha: 16
+  lora_dropout: 0.1
+  lora_target_modules: ["q_lin", "v_lin"]
+
+loss:
+  focal_gamma: 2.0
+  # Per-level weight in the combined loss (must sum to 1.0)
+  level_weights:
+    group: 0.10
+    family: 0.20
+    subfamily: 0.30
+    segment: 0.40
+  # Clip extreme per-class weights (handles near-empty segments)
+  max_class_weight: 10.0
+
+training:
+  output_dir: "models"
+  batch_size: 16
+  learning_rate: 2.0e-4
+  epochs: 1
+  max_steps: 50
+  fp16: true
+  dataloader_num_workers: 4
+  save_total_limit: 2
+
+calibration:
+  temperature_lr: 0.01
+  temperature_max_iter: 50
+  temperature_output: "models/best/temperature.pt"
+
+inference:
+  # Minimum confidence below which prediction is flagged as uncertain
+  confidence_threshold: 0.5
