@@ -53,6 +53,7 @@ log = logging.getLogger(__name__)
 def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument("--config", default="config/base.yaml", help="Path to YAML config")
+    p.add_argument("--resume", default=None, help="Path to checkpoint dir to resume from")
     return p.parse_args()
 
 
@@ -114,13 +115,18 @@ def main():
     test_ds = IFLSDataset(test_df, tokenizer, he, cfg.model.max_length)
 
     # ── 5. Model ───────────────────────────────────────────────────────────
-    seg_weights = compute_class_weights(
-        train_df["segment_id"]
-        .apply(lambda x: he.encoders["segment"].to_idx(int(x)))
-        .tolist(),
-        he.num_classes("segment"),
-        cfg.loss.max_class_weight,
-    ).to(device)
+    if cfg.training.use_class_weights:
+        seg_weights = compute_class_weights(
+            train_df["segment_id"]
+            .apply(lambda x: he.encoders["segment"].to_idx(int(x)))
+            .tolist(),
+            he.num_classes("segment"),
+            cfg.loss.max_class_weight,
+        ).to(device)
+        log.info("Class weights enabled")
+    else:
+        seg_weights = None
+        log.info("Class weights disabled")
 
     backbone_cfg = AutoConfig.from_pretrained(cfg.model.backbone)
 
@@ -132,7 +138,7 @@ def main():
         },
         level_weights=cfg.loss.level_weights,
         focal_gamma=cfg.loss.focal_gamma,
-        focal_weights={"segment": seg_weights},
+        focal_weights={"segment": seg_weights} if seg_weights is not None else None,
     )
 
     # Load pretrained backbone weights (heads stay randomly initialised)
@@ -149,10 +155,20 @@ def main():
         target_modules=cfg.model.lora_target_modules,
     )
     model = get_peft_model(model, lora_config)
+
+    # PEFT freezes all base model params with FEATURE_EXTRACTION — unfreeze heads manually
+    for name, param in model.named_parameters():
+        if "heads" in name:
+            param.requires_grad = True
+
     model.print_trainable_parameters()
 
     # ── 6. Trainer ─────────────────────────────────────────────────────────
-    sampler = make_hierarchical_sampler(train_df, he)
+    sampler = make_hierarchical_sampler(train_df, he) if cfg.training.hierarchical_sampler else None
+    if cfg.training.hierarchical_sampler:
+        log.info("Hierarchical sampler enabled — segments drawn uniformly")
+    else:
+        log.info("Hierarchical sampler disabled — natural product distribution used")
 
     # When max_steps is set, evaluate every half-run and match save_strategy
     # so load_best_model_at_end (which requires eval==save) keeps working.
@@ -175,6 +191,7 @@ def main():
         load_best_model_at_end=True,
         metric_for_best_model="accuracy",
         dataloader_num_workers=cfg.training.dataloader_num_workers,
+        warmup_ratio=cfg.training.warmup_ratio,
         label_names=["labels"],
         report_to="none",
     )
@@ -185,11 +202,11 @@ def main():
         train_dataset=train_ds,
         eval_dataset=test_ds,
         compute_metrics=compute_metrics_fn,
-        sampler=sampler,
+        sampler=sampler,  # None → standard random sampler
     )
 
     log.info("Starting training...")
-    trainer.train()
+    trainer.train(resume_from_checkpoint=args.resume)
 
     # ── 7. Temperature calibration ─────────────────────────────────────────
     log.info("Calibrating temperature on held-out calibration set...")

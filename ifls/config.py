@@ -46,7 +46,10 @@ class TrainingConfig:
     fp16: bool
     dataloader_num_workers: int
     save_total_limit: int
-    max_steps: int = -1  # if > 0, overrides epochs (dev/smoke use)
+    max_steps: int = -1          # if > 0, overrides epochs (dev/smoke use)
+    hierarchical_sampler: bool = True
+    use_class_weights: bool = True
+    warmup_ratio: float = 0.05
 
 
 @dataclass

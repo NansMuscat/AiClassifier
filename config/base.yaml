@@ -24,21 +24,24 @@ loss:
   focal_gamma: 2.0
   # Per-level weight in the combined loss (must sum to 1.0)
   level_weights:
-    group: 0.10
-    family: 0.20
-    subfamily: 0.30
-    segment: 0.40
+    group: 0.05
+    family: 0.10
+    subfamily: 0.15
+    segment: 0.70
   # Clip extreme per-class weights (handles near-empty segments)
   max_class_weight: 10.0
 
 training:
   output_dir: "models"
-  batch_size: 16
+  batch_size: 8
   learning_rate: 2.0e-4
-  epochs: 3
+  epochs: 2
   fp16: true
-  dataloader_num_workers: 4
+  dataloader_num_workers: 0
   save_total_limit: 2
+  hierarchical_sampler: false
+  use_class_weights: false
+  warmup_ratio: 0.02
 
 calibration:
   temperature_lr: 0.01
