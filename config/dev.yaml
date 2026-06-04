@@ -5,20 +5,21 @@ data:
   text_column: "product_name"
   hierarchy_json: "data/hierarchy.json"
   encoders_dir: "data/encoders"
-  train_ratio: 0.05
+  train_ratio: 0.80
   calib_ratio: 0.10
   # test_ratio is implicitly 1 - train - calib
   random_seed: 42
-  max_rows: 500
+  # max_rows: 50000
 
 model:
-  backbone: "distilbert-base-uncased"
+  backbone: "cmarkea/distilcamembert-base"
   max_length: 32
   # LoRA
-  lora_r: 8
+  lora_r: 16
   lora_alpha: 16
-  lora_dropout: 0.1
-  lora_target_modules: ["q_lin", "v_lin"]
+  lora_dropout: 0.2
+  lora_target_modules: ["query", "value"]
+  #lora_target_modules: ["q_lin", "v_lin"]
 
 loss:
   focal_gamma: 2.0
@@ -33,16 +34,16 @@ loss:
 
 training:
   output_dir: "models"
-  batch_size: 16
+  batch_size: 8
   learning_rate: 2.0e-4
-  epochs: 1
-  max_steps: 50
+  epochs: 4
+  #max_steps: 50
   fp16: true
-  dataloader_num_workers: 4
+  dataloader_num_workers: 0
   save_total_limit: 2
-  hierarchical_sampler: false
+  hierarchical_sampler: true
   use_class_weights: false
-  warmup_ratio: 0.05
+  warmup_ratio: 0.1
 
 calibration:
   temperature_lr: 0.01

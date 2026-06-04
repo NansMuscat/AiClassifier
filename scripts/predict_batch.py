@@ -56,7 +56,7 @@ def main():
     he = HierarchyEncoder.load(cfg.data.hierarchy_json)
 
     log.info("Loading tokenizer and model...")
-    tokenizer = AutoTokenizer.from_pretrained(args.model)
+    tokenizer = AutoTokenizer.from_pretrained(args.model, use_fast=False)
     config    = AutoConfig.from_pretrained(args.model)
     model     = IFLSMultiHeadClassifier.from_pretrained(args.model, config=config)
     model.eval()

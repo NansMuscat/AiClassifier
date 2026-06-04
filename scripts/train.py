@@ -81,7 +81,8 @@ def main():
     if cfg.data.max_rows:
         df = df.head(cfg.data.max_rows)
         log.info(f"Truncated to {cfg.data.max_rows:,} rows (dev mode)")
-    df["text"] = df[cfg.data.text_column].astype(str).map(normalize)
+    is_cased_french = "camembert" in cfg.model.backbone.lower() or "roberta" in cfg.model.backbone.lower()
+    df["text"] = df[cfg.data.text_column].astype(str).map(lambda t: normalize(t, strip_accents=not is_cased_french))
     log.info(f"Loaded {len(df):,} products")
 
     # ── 2. Hierarchy encoder ───────────────────────────────────────────────
@@ -108,7 +109,7 @@ def main():
 
     # ── 4. Tokenizer & datasets ────────────────────────────────────────────
     log.info(f"Loading tokenizer: {cfg.model.backbone}")
-    tokenizer = AutoTokenizer.from_pretrained(cfg.model.backbone)
+    tokenizer = AutoTokenizer.from_pretrained(cfg.model.backbone, use_fast=False)
 
     train_ds = IFLSDataset(train_df, tokenizer, he, cfg.model.max_length)
     calib_ds = IFLSDataset(calib_df, tokenizer, he, cfg.model.max_length)
