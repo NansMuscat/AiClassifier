@@ -1,4 +1,4 @@
-"""PyTorch Dataset for IFLS hierarchical classification."""
+"""PyTorch Dataset for IFLS segment classification."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ class IFLSDataset(Dataset):
     """
     Each item returns:
       input_ids, attention_mask  — tokenized product name
-      label_group, label_family, label_subfamily, label_segment  — model indices
+      labels                     — segment model index
     """
 
     def __init__(
@@ -29,13 +29,11 @@ class IFLSDataset(Dataset):
         self.texts = df["text"].tolist()
         self.tokenizer = tokenizer
         self.max_length = max_length
-
-        # Pre-encode all labels to avoid doing it inside __getitem__
-        encoded = [hierarchy_encoder.encode_row(row) for _, row in df.iterrows()]
-        self.labels: Dict[str, torch.Tensor] = {
-            lvl: torch.tensor([e[lvl] for e in encoded], dtype=torch.long)
-            for lvl in ("group", "family", "subfamily", "segment")
-        }
+        seg_enc = hierarchy_encoder.encoders["segment"]
+        self.labels = torch.tensor(
+            [seg_enc.to_idx(int(sid)) for sid in df["segment_id"]],
+            dtype=torch.long,
+        )
 
     def __len__(self) -> int:
         return len(self.texts)
@@ -49,10 +47,7 @@ class IFLSDataset(Dataset):
             return_tensors="pt",
         )
         return {
-            "input_ids":        enc["input_ids"].squeeze(0),
-            "attention_mask":   enc["attention_mask"].squeeze(0),
-            "label_group":      self.labels["group"][idx],
-            "label_family":     self.labels["family"][idx],
-            "label_subfamily":  self.labels["subfamily"][idx],
-            "labels":           self.labels["segment"][idx],
+            "input_ids":      enc["input_ids"].squeeze(0),
+            "attention_mask": enc["attention_mask"].squeeze(0),
+            "labels":         self.labels[idx],
         }

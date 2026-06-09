@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-import yaml
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List
+from typing import List
+
+import yaml
 
 
 @dataclass
@@ -17,7 +18,7 @@ class DataConfig:
     train_ratio: float
     calib_ratio: float
     random_seed: int
-    max_rows: int = None  # if set, truncate CSV after loading (dev/smoke use)
+    max_rows: int = None
 
 
 @dataclass
@@ -31,13 +32,6 @@ class ModelConfig:
 
 
 @dataclass
-class LossConfig:
-    focal_gamma: float
-    level_weights: Dict[str, float]
-    max_class_weight: float
-
-
-@dataclass
 class TrainingConfig:
     output_dir: str
     batch_size: int
@@ -46,9 +40,8 @@ class TrainingConfig:
     fp16: bool
     dataloader_num_workers: int
     save_total_limit: int
-    max_steps: int = -1          # if > 0, overrides epochs (dev/smoke use)
-    hierarchical_sampler: bool = True
-    use_class_weights: bool = True
+    label_smoothing: float = 0.1
+    max_steps: int = -1
     warmup_ratio: float = 0.05
 
 
@@ -68,7 +61,6 @@ class InferenceConfig:
 class Config:
     data: DataConfig
     model: ModelConfig
-    loss: LossConfig
     training: TrainingConfig
     calibration: CalibrationConfig
     inference: InferenceConfig
@@ -79,7 +71,6 @@ class Config:
         return Config(
             data=DataConfig(**raw["data"]),
             model=ModelConfig(**raw["model"]),
-            loss=LossConfig(**raw["loss"]),
             training=TrainingConfig(**raw["training"]),
             calibration=CalibrationConfig(**raw["calibration"]),
             inference=InferenceConfig(**raw["inference"]),

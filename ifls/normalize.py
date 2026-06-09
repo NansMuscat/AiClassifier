@@ -34,7 +34,27 @@ def _expand_abbreviations(text: str) -> str:
     return text
 
 
-def normalize(text: str, strip_accents: bool = False) -> str:
+def normalize(text: str, strip_accents: bool = False):
+    text = text.lower()
+    # 2. Strip accents (NFD → ASCII)
+    if strip_accents:
+        text = (
+            unicodedata.normalize("NFKD", text)
+            .encode("ascii", "ignore")
+            .decode("utf-8")
+        )
+    # 3. pack normalization
+    text = re.sub(r"\bx\s*\d+\b", " bt ", text)
+    # 4. Remove simple volume / weight
+    text = re.sub(r"\b\d+\s*\/\s*\d+\s*(lt|l|ml|g|kg)\b", "", text)
+    # 5. Remove float volume / weight
+    text = re.sub(r"\b\d+(\.\d+)?\s*(l|ml|g|kg|lt|m)\b", "", text)
+    # 6. Collapse whitespace
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+def normalize_with_dict(text: str, strip_accents: bool = False) -> str:
     """
     Clean a raw product name for tokenization.
 

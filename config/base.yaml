@@ -1,7 +1,6 @@
 data:
   csv_path: "data/products.csv"
   # Expected CSV columns: product_name, group_id, family_id, subfamily_id, segment_id
-  # All *_id columns contain arbitrary long integers (DB primary keys)
   text_column: "product_name"
   hierarchy_json: "data/hierarchy.json"
   encoders_dir: "data/encoders"
@@ -9,39 +8,28 @@ data:
   calib_ratio: 0.10
   # test_ratio is implicitly 1 - train - calib
   random_seed: 42
-  # max_row: Set this to train only on a maximum set of rows (test only)
+  # max_rows: Set this to train only on a maximum set of rows (test only)
 
 model:
   backbone: "distilbert-base-uncased"
   max_length: 32
   # LoRA
-  lora_r: 8
-  lora_alpha: 16
+  lora_r: 32
+  lora_alpha: 64
   lora_dropout: 0.1
   lora_target_modules: ["q_lin", "v_lin"]
 
-loss:
-  focal_gamma: 2.0
-  # Per-level weight in the combined loss (must sum to 1.0)
-  level_weights:
-    group: 0.05
-    family: 0.10
-    subfamily: 0.15
-    segment: 0.70
-  # Clip extreme per-class weights (handles near-empty segments)
-  max_class_weight: 10.0
-
 training:
   output_dir: "models"
-  batch_size: 8
+  batch_size: 16
   learning_rate: 2.0e-4
-  epochs: 3
+  epochs: 4
   fp16: true
   dataloader_num_workers: 0
   save_total_limit: 2
-  hierarchical_sampler: false
-  use_class_weights: false
   warmup_ratio: 0.02
+  # Label smoothing prevents overconfidence — important for the human-review fallback
+  label_smoothing: 0.1
 
 calibration:
   temperature_lr: 0.01

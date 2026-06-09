@@ -1,4 +1,6 @@
-product_name,segment_id,subfamily_id,family_id,group_id,confidence_segment,confidence_subfamily,confidence_family,confidence_group,uncertain
-Terrine aux 2 poissons kg,2284001,1256001,945001,894001,0.9999,0.9998,1.0,0.8484,False
-Quatre quart chocolat 40 g,1425001,978001,898001,885001,0.8969,0.8973,0.8901,0.7031,False
-Quatre quart 30/40 g,1425001,978001,898001,885001,0.9896,0.9688,0.753,0.8434,False
+product_name,segment_id,subfamily_id,family_id,group_id,confidence,uncertain
+Terrine aux 2 poissons kg,2284001,1256001,945001,894001,0.9635,False
+Quatre quart chocolat 40 g,1425001,978001,898001,885001,0.9508,False
+Quatre quart 30/40 g,1425001,978001,898001,885001,0.9744,False
+Couronne de filet d'abadèche et de saumon sg kg,1981001,1158001,935001,889001,0.6146,False
+Abricot au naturel bt 5/1,1634001,1063001,916001,885001,0.9841,False

@@ -10,8 +10,7 @@ Usage:
         --scaler models/best/temperature.pt
 
 Input CSV must have a column matching config.data.text_column (default: product_name).
-Output CSV adds columns: segment_id, family_id, subfamily_id, group_id,
-  confidence_segment, confidence_subfamily, confidence_family, confidence_group, uncertain.
+Output CSV adds: segment_id, subfamily_id, family_id, group_id, confidence, uncertain.
 """
 
 import argparse
@@ -21,15 +20,13 @@ from pathlib import Path
 
 import pandas as pd
 import torch
-from transformers import AutoConfig, AutoTokenizer
+from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from ifls.calibrate import TemperatureScaler
 from ifls.config import Config
 from ifls.hierarchy import HierarchyEncoder
-from ifls.model import IFLSMultiHeadClassifier
-from ifls.normalize import normalize
 from ifls.predict import predict_batch
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -38,11 +35,11 @@ log = logging.getLogger(__name__)
 
 def parse_args():
     p = argparse.ArgumentParser()
-    p.add_argument("--config",  default="config/base.yaml")
-    p.add_argument("--input",   required=True, help="CSV with product names")
-    p.add_argument("--output",  required=True, help="Output CSV path")
-    p.add_argument("--model",   default="models/best", help="Model checkpoint dir")
-    p.add_argument("--scaler",  default="models/best/temperature.pt")
+    p.add_argument("--config",     default="config/base.yaml")
+    p.add_argument("--input",      required=True, help="CSV with product names")
+    p.add_argument("--output",     required=True, help="Output CSV path")
+    p.add_argument("--model",      default="models/best")
+    p.add_argument("--scaler",     default="models/best/temperature.pt")
     p.add_argument("--batch-size", type=int, default=64)
     return p.parse_args()
 
@@ -57,20 +54,19 @@ def main():
 
     log.info("Loading tokenizer and model...")
     tokenizer = AutoTokenizer.from_pretrained(args.model, use_fast=False)
-    config    = AutoConfig.from_pretrained(args.model)
-    model     = IFLSMultiHeadClassifier.from_pretrained(args.model, config=config)
+    model     = AutoModelForSequenceClassification.from_pretrained(args.model)
     model.eval()
 
     scaler = TemperatureScaler.load(args.scaler)
 
     log.info(f"Reading input: {args.input}")
-    df = pd.read_csv(args.input)
+    df    = pd.read_csv(args.input)
     texts = df[cfg.data.text_column].astype(str).tolist()
 
     log.info(f"Running inference on {len(texts):,} products...")
     all_preds = []
     for start in range(0, len(texts), args.batch_size):
-        chunk = texts[start : start + args.batch_size]
+        chunk = texts[start: start + args.batch_size]
         preds = predict_batch(
             texts=chunk,
             model=model,
@@ -87,15 +83,12 @@ def main():
 
     pred_df = pd.DataFrame([
         {
-            "segment_id":           p.segment_id,
-            "subfamily_id":         p.subfamily_id,
-            "family_id":            p.family_id,
-            "group_id":             p.group_id,
-            "confidence_segment":   round(p.confidence_segment, 4),
-            "confidence_subfamily": round(p.confidence_subfamily, 4),
-            "confidence_family":    round(p.confidence_family, 4),
-            "confidence_group":     round(p.confidence_group, 4),
-            "uncertain":            p.uncertain,
+            "segment_id":   p.segment_id,
+            "subfamily_id": p.subfamily_id,
+            "family_id":    p.family_id,
+            "group_id":     p.group_id,
+            "confidence":   round(p.confidence, 4),
+            "uncertain":    p.uncertain,
         }
         for p in all_preds
     ])
