@@ -1,0 +1,8 @@
+{
+  "config": ".\\config\\base.yaml",
+  "num_products": 260916,
+  "num_segments": 1048,
+  "eval_accuracy": 0.8427547618135132,
+  "eval_loss": 0.44468584656715393,
+  "temperature": 0.9345372319221497
+}
